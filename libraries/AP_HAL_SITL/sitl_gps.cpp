@@ -689,6 +689,9 @@ void SITL_State::_update_gps_nmea(const struct gps_data *d, uint8_t instance)
 =======
     float speed_knots = norm(d->speedN, d->speedE) * M_PER_SEC_TO_KNOTS;
 
+<<<<<<< HEAD
+>>>>>>> ddc44caa83... AP_HAL_SITL: Send NMEA GPHDT sentence if enabled.
+=======
 >>>>>>> ddc44caa83... AP_HAL_SITL: Send NMEA GPHDT sentence if enabled.
     float heading = ToDeg(atan2f(d->speedE, d->speedN));
     if (heading < 0) {
