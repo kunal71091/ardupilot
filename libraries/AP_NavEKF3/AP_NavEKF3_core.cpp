@@ -50,8 +50,7 @@ bool NavEKF3_core::setup_core(NavEKF3 *_frontend, uint8_t _imu_index, uint8_t _c
 
     /*
       The imu_buffer_length needs to cope with the worst case sensor delay at the
-      maximum fusion rate of 100Hz. Non-imu data coming in at faster than 100Hz is
-      downsampled. For 50Hz main loop rate we need a shorter buffer.
+      target EKF state prediction rate. Non-IMU data coming in faster is downsampled.
      */
 
     // Calculate the expected EKF time step
@@ -128,6 +127,9 @@ bool NavEKF3_core::setup_core(NavEKF3 *_frontend, uint8_t _imu_index, uint8_t _c
         return false;
     }
     if(!storedWheelOdm.init(imu_buffer_length)) { // initialise to same length of IMU to allow for multiple wheel sensors
+        return false;
+    }
+    if(!storedYawAng.init(obs_buffer_length)) {
         return false;
     }
     // Note: the use of dual range finders potentially doubles the amount of data to be stored
@@ -399,6 +401,41 @@ void NavEKF3_core::InitialiseVariables()
     storedRangeBeacon.reset();
     storedBodyOdm.reset();
     storedWheelOdm.reset();
+<<<<<<< HEAD
+=======
+
+    InitialiseVariablesMag();
+}
+
+
+// Use a function call rather than a constructor to initialise variables because it enables the filter to be re-started in flight if necessary.
+void NavEKF3_core::InitialiseVariablesMag()
+{
+    lastHealthyMagTime_ms = imuSampleTime_ms;
+    lastMagUpdate_us = 0;
+    magYawResetTimer_ms = imuSampleTime_ms;
+    magTimeout = false;
+    allMagSensorsFailed = false;
+    badMagYaw = false;
+    finalInflightMagInit = false;
+    mag_state.q0 = 1;
+    mag_state.DCM.identity();
+    inhibitMagStates = true;
+    magStoreIndex = 0;
+    if (_ahrs->get_compass()) {
+        magSelectIndex = _ahrs->get_compass()->get_primary();
+    }
+    lastMagOffsetsValid = false;
+    magStateResetRequest = false;
+    magStateInitComplete = false;
+    magYawResetRequest = false;
+    posDownAtLastMagReset = stateStruct.position.z;
+    yawInnovAtLastMagReset = 0.0f;
+    quatAtLastMagReset = stateStruct.quat;
+    magFieldLearned = false;
+    storedMag.reset();
+    storedYawAng.reset();
+>>>>>>> e9f840531a... AP_NavEKF3: Add data buffers for yaw sensor
 }
 
 // Initialise the states from accelerometer and magnetometer data (if present)
