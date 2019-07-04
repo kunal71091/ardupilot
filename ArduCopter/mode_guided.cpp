@@ -632,13 +632,77 @@ void ModeGuided::angle_control_run()
         attitude_control->input_euler_angle_roll_pitch_yaw(roll_in, pitch_in, yaw_in, true);
     }
 
+    //call position controller
+    pos_control->set_alt_target_from_climb_rate_ff(climb_rate_cms, G_Dt, false);
+    pos_control->update_z_controller();
+}
+
+// guided_angle_control_run - runs the guided angle controller with thrust feedthrough
+// from mavlink message (set_attitude_target)
+
+void ModeGuided::angle_control_run_thrust_ft()
+{
+    // constrain desired lean angles
+    float roll_in = guided_angle_state.roll_cd;
+    float pitch_in = guided_angle_state.pitch_cd;
+    float total_in = norm(roll_in, pitch_in);
+    float angle_max = MIN(attitude_control->get_althold_lean_angle_max(), copter.aparm.angle_max);
+    if (total_in > angle_max) {
+        float ratio = angle_max / total_in;
+        roll_in *= ratio;
+        pitch_in *= ratio;
+    }
+
+    // wrap yaw request
+    float yaw_in = wrap_180_cd(guided_angle_state.yaw_cd);
+    float yaw_rate_in = wrap_180_cd(guided_angle_state.yaw_rate_cds);
+
+    // constrain climb rate
+    float climb_rate_cms = constrain_float(guided_angle_state.climb_rate_cms, -fabsf(wp_nav->get_default_speed_down()), wp_nav->get_default_speed_up());
+
+    // get avoidance adjusted climb rate
+    climb_rate_cms = get_avoidance_adjusted_climbrate(climb_rate_cms);
+
+    // check for timeout - set lean angles and climb rate to zero if no updates received for 3 seconds
+    uint32_t tnow = millis();
+    if (tnow - guided_angle_state.update_time_ms > GUIDED_ATTITUDE_TIMEOUT_MS) {
+        roll_in = 0.0f;
+        pitch_in = 0.0f;
+        climb_rate_cms = 0.0f;
+        yaw_rate_in = 0.0f;
+    }
+
+    // if not armed set throttle to zero and exit immediately
+    if (!motors->armed() || !copter.ap.auto_armed || (copter.ap.land_complete && (guided_angle_state.climb_rate_cms <= 0.0f))) {
+        make_safe_spool_down();
+        return;
+    }
+
+    // TODO: use get_alt_hold_state
+    // landed with positive desired climb rate, takeoff
+    if (copter.ap.land_complete && (guided_angle_state.climb_rate_cms > 0.0f)) {
+        zero_throttle_and_relax_ac();
+        motors->set_desired_spool_state(AP_Motors::DesiredSpoolState::THROTTLE_UNLIMITED);
+        if (motors->get_spool_state() == AP_Motors::SpoolState::THROTTLE_UNLIMITED) {
+            set_land_complete(false);
+            set_throttle_takeoff();
+        }
+        return;
+    }
+
+    // set motors to full range
+    motors->set_desired_spool_state(AP_Motors::DesiredSpoolState::THROTTLE_UNLIMITED);
+
+    // call attitude controller
+    if (guided_angle_state.use_yaw_rate) {
+        attitude_control->input_euler_angle_roll_pitch_euler_rate_yaw(roll_in, pitch_in, yaw_rate_in);
+    } else {
+        attitude_control->input_euler_angle_roll_pitch_yaw(roll_in, pitch_in, yaw_in, true);
+    }
+
     attitude_control->set_throttle_out(guided_angle_state.climb_rate_cms,
                                        false,
                                        g.throttle_filt);
-
-    // call position controller
-    // pos_control->set_alt_target_from_climb_rate_ff(climb_rate_cms, G_Dt, false);
-    // pos_control->update_z_controller();
 }
 
 // helper function to update position controller's desired velocity while respecting acceleration limits

@@ -758,6 +758,7 @@ public:
 
     void angle_control_start();
     void angle_control_run();
+    void angle_control_run_thrust_ft();
 
 protected:
 
