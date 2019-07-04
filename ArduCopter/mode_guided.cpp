@@ -632,9 +632,13 @@ void ModeGuided::angle_control_run()
         attitude_control->input_euler_angle_roll_pitch_yaw(roll_in, pitch_in, yaw_in, true);
     }
 
+    attitude_control->set_throttle_out(guided_angle_state.climb_rate_cms,
+                                       false,
+                                       g.throttle_filt);
+
     // call position controller
-    pos_control->set_alt_target_from_climb_rate_ff(climb_rate_cms, G_Dt, false);
-    pos_control->update_z_controller();
+    // pos_control->set_alt_target_from_climb_rate_ff(climb_rate_cms, G_Dt, false);
+    // pos_control->update_z_controller();
 }
 
 // helper function to update position controller's desired velocity while respecting acceleration limits
