@@ -28,6 +28,25 @@ SITL_START_LOCATION = mavutil.location(40.071374969556928,
 
 
 class AutoTestRover(AutoTest):
+    @staticmethod
+    def get_not_armable_mode_list():
+        return []
+
+    @staticmethod
+    def get_not_disarmed_settable_modes_list():
+        return ["FOLLOW"]
+
+    @staticmethod
+    def get_no_position_not_settable_modes_list():
+        return []
+
+    @staticmethod
+    def get_position_armable_modes_list():
+        return ["GUIDED", "LOITER", "STEERING", "AUTO", "RTL", "SMART_RTL"]
+
+    @staticmethod
+    def get_normal_armable_modes_list():
+        return ["ACRO", "HOLD", "MANUAL"]
 
     def log_name(self):
         return "APMrover2"
@@ -46,6 +65,9 @@ class AutoTestRover(AutoTest):
 
     def get_stick_arming_channel(self):
         return int(self.get_parameter("RCMAP_ROLL"))
+
+    def arming_test_mission(self):
+        return os.path.join(testdir, "ArduRover-Missions", "test_arming.txt")
 
     ##########################################################
     #   TESTS DRIVE
@@ -498,9 +520,9 @@ Brakes have negligible effect (with=%0.2fm without=%0.2fm delta=%0.2fm)
             raise ex
 
     def test_servorelayevents(self):
-        self.mavproxy.send("relay set 0 0\n")
+        self.do_set_relay(0, 0)
         off = self.get_parameter("SIM_PIN_MASK")
-        self.mavproxy.send("relay set 0 1\n")
+        self.do_set_relay(0, 1)
         on = self.get_parameter("SIM_PIN_MASK")
         if on == off:
             raise NotAchievedException(
@@ -1019,7 +1041,7 @@ Brakes have negligible effect (with=%0.2fm without=%0.2fm delta=%0.2fm)
         self.change_mode("RTL")
         # location copied in from rover-test-rally.txt:
         loc = mavutil.location(40.071553,
-	                           -105.229401,
+                               -105.229401,
                                0,
                                0)
         self.wait_location(loc, accuracy=accuracy)
@@ -1140,12 +1162,30 @@ Brakes have negligible effect (with=%0.2fm without=%0.2fm delta=%0.2fm)
             raise NotAchievedException("Bad count received (want=%u got=%u)" %
                                        (expected_count, m.count))
 
-    def get_mission_item_on_link(self, item, mav, target_system, target_component, mission_type):
+    def get_mission_item_int_on_link(self, item, mav, target_system, target_component, mission_type):
         mav.mav.mission_request_int_send(target_system,
                                          target_component,
                                          item,
                                          mission_type)
         m = mav.recv_match(type='MISSION_ITEM_INT',
+                           blocking=True,
+                           timeout=1)
+        if m is None:
+            raise NotAchievedException("Did not receive mission item int")
+        if m.target_system != mav.mav.srcSystem:
+            raise NotAchievedException("Unexpected target system %u want=%u" %
+                                       (m.target_system, mav.mav.srcSystem))
+        if m.target_component != mav.mav.srcComponent:
+            raise NotAchievedException("Unexpected target component %u want=%u" %
+                                       (m.target_component, mav.mav.srcComponent))
+        return m
+
+    def get_mission_item_on_link(self, item, mav, target_system, target_component, mission_type):
+        mav.mav.mission_request_send(target_system,
+                                     target_component,
+                                     item,
+                                     mission_type)
+        m = mav.recv_match(type='MISSION_ITEM',
                            blocking=True,
                            timeout=1)
         if m is None:
@@ -1384,11 +1424,12 @@ Brakes have negligible effect (with=%0.2fm without=%0.2fm delta=%0.2fm)
             self.progress("Assert mission count on original link")
             self.assert_mission_count_on_link(self.mav, expected_count, target_system, target_component, mavutil.mavlink.MAV_MISSION_TYPE_RALLY)
             self.progress("Get first item on new link")
-            m2 = self.get_mission_item_on_link(2, mav2, target_system, target_component, mavutil.mavlink.MAV_MISSION_TYPE_RALLY)
+            m2 = self.get_mission_item_int_on_link(2, mav2, target_system, target_component, mavutil.mavlink.MAV_MISSION_TYPE_RALLY)
             self.progress("Get first item on original link")
-            m = self.get_mission_item_on_link(2, self.mav, target_system, target_component, mavutil.mavlink.MAV_MISSION_TYPE_RALLY)
+            m = self.get_mission_item_int_on_link(2, self.mav, target_system, target_component, mavutil.mavlink.MAV_MISSION_TYPE_RALLY)
             if m2.x != m.x:
                 raise NotAchievedException("mission items do not match (%d vs %d)" % (m2.x, m.x))
+            m_nonint = self.get_mission_item_on_link(2, self.mav, target_system, target_component, mavutil.mavlink.MAV_MISSION_TYPE_RALLY)
             self.start_subtest("Should enforce items come from correct GCS")
             self.mav.mav.mission_count_send(target_system,
                                             target_component,
@@ -1701,7 +1742,7 @@ Brakes have negligible effect (with=%0.2fm without=%0.2fm delta=%0.2fm)
              lambda: self.drive_mission("rover1.txt")),
 
             # disabled due to frequent failures in travis. This test needs re-writing
-                # ("Drive Brake", self.drive_brake),
+            # ("Drive Brake", self.drive_brake),
 
             ("GetBanner", "Get Banner", self.do_get_banner),
 
@@ -1793,7 +1834,7 @@ Brakes have negligible effect (with=%0.2fm without=%0.2fm delta=%0.2fm)
         ret = super(AutoTestRover, self).rc_defaults()
         ret[3] = 1500
         ret[8] = 1800
-        return ret;
+        return ret
 
     def default_mode(self):
         return 'MANUAL'

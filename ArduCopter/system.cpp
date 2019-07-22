@@ -111,8 +111,14 @@ void Copter::init_ardupilot()
     // allocate the motors class
     allocate_motors();
 
+    // initialise rc channels including setting mode
+    rc().init();
+
     // sets up motors and output to escs
     init_rc_out();
+
+    // check if we should enter esc calibration mode
+    esc_calibration_startup_check();
 
     // motors initialised so parameters can be sent
     ap.initialised_params = true;
@@ -215,9 +221,6 @@ void Copter::init_ardupilot()
     // initialise AP_Logger library
     logger.setVehicle_Startup_Writer(FUNCTOR_BIND(&copter, &Copter::Log_Write_Vehicle_Startup_Messages, void));
 
-    // initialise rc channels including setting mode
-    rc().init();
-
     startup_INS_ground();
 
 #ifdef ENABLE_SCRIPTING
@@ -272,7 +275,7 @@ void Copter::startup_INS_ground()
 }
 
 // position_ok - returns true if the horizontal absolute position is ok and home position is set
-bool Copter::position_ok()
+bool Copter::position_ok() const
 {
     // return false if ekf failsafe has triggered
     if (failsafe.ekf) {
@@ -284,7 +287,7 @@ bool Copter::position_ok()
 }
 
 // ekf_position_ok - returns true if the ekf claims it's horizontal absolute position estimate is ok and home position is set
-bool Copter::ekf_position_ok()
+bool Copter::ekf_position_ok() const
 {
     if (!ahrs.have_inertial_nav()) {
         // do not allow navigation with dcm position
@@ -304,7 +307,7 @@ bool Copter::ekf_position_ok()
 }
 
 // optflow_position_ok - returns true if optical flow based position estimate is ok
-bool Copter::optflow_position_ok()
+bool Copter::optflow_position_ok() const
 {
 #if OPTFLOW != ENABLED && VISUAL_ODOMETRY_ENABLED != ENABLED
     return false;
