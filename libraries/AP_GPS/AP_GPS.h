@@ -26,9 +26,15 @@
    maximum number of GPS instances available on this platform. If more
    than 1 then redundant sensors may be available
  */
+#ifndef GPS_MAX_RECEIVERS
 #define GPS_MAX_RECEIVERS 2 // maximum number of physical GPS sensors allowed - does not include virtual GPS created by blending receiver data
+#endif
+#ifndef GPS_MAX_INSTANCES
 #define GPS_MAX_INSTANCES  (GPS_MAX_RECEIVERS + 1) // maximum number of GPS instances including the 'virtual' GPS created by blending receiver data
+#endif
+#if GPS_MAX_INSTANCES > GPS_MAX_RECEIVERS
 #define GPS_BLENDED_INSTANCE GPS_MAX_RECEIVERS  // the virtual blended GPS is always the highest instance (2)
+#endif
 #define GPS_UNKNOWN_DOP UINT16_MAX // set unknown DOP's to maximum value, which is also correct for MAVLink
 
 // the number of GPS leap seconds
@@ -384,14 +390,9 @@ public:
 
     void send_mavlink_gps_rtk(mavlink_channel_t chan, uint8_t inst);
 
-    // Returns the index of the first unconfigured GPS (returns GPS_ALL_CONFIGURED if all instances report as being configured)
-    uint8_t first_unconfigured_gps(void) const;
+    // Returns true if there is an unconfigured GPS, and provides the instance number of the first non configured GPS
+    bool first_unconfigured_gps(uint8_t &instance) const WARN_IF_UNUSED;
     void broadcast_first_configuration_failure_reason(void) const;
-
-    // return true if all GPS instances have finished configuration
-    bool all_configured(void) const {
-        return first_unconfigured_gps() == GPS_ALL_CONFIGURED;
-    }
 
     // pre-arm check that all GPSs are close to each other.  farthest distance between GPSs (in meters) is returned
     bool all_consistent(float &distance) const;

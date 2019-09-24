@@ -39,6 +39,7 @@
 #include "AP_RangeFinder_PWM.h"
 #include "AP_RangeFinder_BLPing.h"
 #include "AP_RangeFinder_UAVCAN.h"
+#include "AP_RangeFinder_Lanbao.h"
 
 #include <AP_BoardConfig/AP_BoardConfig.h>
 #include <AP_Logger/AP_Logger.h>
@@ -380,6 +381,10 @@ void RangeFinder::detect_instance(uint8_t instance, uint8_t& serial_instance)
         break;
     case RangeFinder_TYPE_LWI2C:
         if (params[instance].address) {
+            // the LW20 needs a long time to boot up, so we delay 1.5s here
+            if (!hal.util->was_watchdog_armed()) {
+                hal.scheduler->delay(1500);
+            }
 #ifdef HAL_RANGEFINDER_LIGHTWARE_I2C_BUS
             _add_backend(AP_RangeFinder_LightWareI2C::detect(state[instance], params[instance],
                 hal.i2c_mgr->get_device(HAL_RANGEFINDER_LIGHTWARE_I2C_BUS, params[instance].address)));
@@ -506,6 +511,11 @@ void RangeFinder::detect_instance(uint8_t instance, uint8_t& serial_instance)
     case RangeFinder_TYPE_BLPing:
         if (AP_RangeFinder_BLPing::detect(serial_instance)) {
             drivers[instance] = new AP_RangeFinder_BLPing(state[instance], params[instance], serial_instance++);
+        }
+        break;
+    case RangeFinder_TYPE_Lanbao:
+        if (AP_RangeFinder_Lanbao::detect(serial_instance)) {
+            drivers[instance] = new AP_RangeFinder_Lanbao(state[instance], params[instance], serial_instance++);
         }
         break;
     default:
@@ -691,6 +701,18 @@ void RangeFinder::Log_RFND()
         };
         AP::logger().WriteBlock(&pkt, sizeof(pkt));
     }
+}
+
+bool RangeFinder::prearm_healthy(char *failure_msg, const uint8_t failure_msg_len) const
+{
+    for (uint8_t i = 0; i < RANGEFINDER_MAX_INSTANCES; i++) {
+        if ((params[i].type != RangeFinder_TYPE_NONE) && (drivers[i] == nullptr)) {
+          hal.util->snprintf(failure_msg, failure_msg_len, "Rangefinder %d was not detected", i + 1);
+          return false;
+        }
+    }
+
+    return true;
 }
 
 RangeFinder *RangeFinder::_singleton;

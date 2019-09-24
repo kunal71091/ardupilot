@@ -83,6 +83,18 @@
 #include "defines.h"
 #include "config.h"
 
+#if FRAME_CONFIG == HELI_FRAME
+    #define AC_AttitudeControl_t AC_AttitudeControl_Heli
+#else
+    #define AC_AttitudeControl_t AC_AttitudeControl_Multi
+#endif
+
+#if FRAME_CONFIG == HELI_FRAME
+ #define MOTOR_CLASS AP_MotorsHeli
+#else
+ #define MOTOR_CLASS AP_MotorsMulticopter
+#endif
+
 #include "RC_Channel.h"         // RC Channel Library
 
 #include "GCS_Mavlink.h"
@@ -96,6 +108,10 @@
 #endif
 #if AC_AVOID_ENABLED == ENABLED
  #include <AC_Avoidance/AC_Avoid.h>
+#endif
+#if AC_OAPATHPLANNER_ENABLED == ENABLED
+ #include <AC_WPNav/AC_WPNav_OA.h>
+ #include <AC_Avoidance/AP_OAPathPlanner.h>
 #endif
 #if SPRAYER_ENABLED == ENABLED
  # include <AC_Sprayer/AC_Sprayer.h>
@@ -174,18 +190,6 @@
 
 #if CONFIG_HAL_BOARD == HAL_BOARD_SITL
 #include <SITL/SITL.h>
-#endif
-
-#if FRAME_CONFIG == HELI_FRAME
-    #define AC_AttitudeControl_t AC_AttitudeControl_Heli
-#else
-    #define AC_AttitudeControl_t AC_AttitudeControl_Multi
-#endif
-
-#if FRAME_CONFIG == HELI_FRAME
- #define MOTOR_CLASS AP_MotorsHeli
-#else
- #define MOTOR_CLASS AP_MotorsMulticopter
 #endif
 
 #include "mode.h"
@@ -287,7 +291,22 @@ private:
         int8_t glitch_count;
     } rangefinder_state;
 
-    struct {
+    class SurfaceTracking {
+    public:
+        float adjust_climb_rate(float target_rate);
+        bool get_target_alt_cm(float &target_alt_cm) const;
+        void set_target_alt_cm(float target_alt_cm);
+        float logging_target_alt() const {
+            if (!valid_for_logging) {
+                return AP::logger().quiet_nan();
+            }
+            return target_alt_cm * 0.01f; // cm->m
+        }
+        void invalidate_for_logging() {
+            valid_for_logging = false;
+        }
+
+    private:
         float target_alt_cm;        // desired altitude in cm above the ground
         uint32_t last_update_ms;    // system time of last update to target_alt_cm
         bool valid_for_logging;     // true if target_alt_cm is valid for logging
@@ -368,10 +387,10 @@ private:
 
     // This is the state of the flight control system
     // There are multiple states defined such as STABILIZE, ACRO,
-    control_mode_t control_mode;
+    Mode::Number control_mode;
     mode_reason_t control_mode_reason = MODE_REASON_UNKNOWN;
 
-    control_mode_t prev_control_mode;
+    Mode::Number prev_control_mode;
     mode_reason_t prev_control_mode_reason = MODE_REASON_UNKNOWN;
 
     RCMapper rcmap;
@@ -646,9 +665,6 @@ private:
     void set_throttle_takeoff();
     float get_pilot_desired_climb_rate(float throttle_control);
     float get_non_takeoff_throttle();
-    float get_surface_tracking_climb_rate(int16_t target_rate);
-    bool get_surface_tracking_target_alt_cm(float &target_alt_cm) const;
-    void set_surface_tracking_target_alt_cm(float target_alt_cm);
     float get_avoidance_adjusted_climbrate(float target_rate);
     void set_accel_throttle_I_from_pilot_throttle();
     void rotate_body_frame_to_NE(float &x, float &y);
@@ -761,7 +777,7 @@ private:
     void log_init(void);
 
     // mode.cpp
-    bool set_mode(control_mode_t mode, mode_reason_t reason);
+    bool set_mode(Mode::Number mode, mode_reason_t reason);
     void update_flight_mode();
     void notify_flight_mode();
 
@@ -813,7 +829,6 @@ private:
     void read_rangefinder(void);
     bool rangefinder_alt_ok();
     void rpm_update();
-    void init_compass_location();
     void init_optflow();
     void update_optical_flow(void);
     void compass_cal_update(void);
@@ -944,7 +959,7 @@ private:
 #endif
 
     // mode.cpp
-    Mode *mode_from_mode_num(const uint8_t mode);
+    Mode *mode_from_mode_num(const Mode::Number mode);
     void exit_mode(Mode *&old_flightmode, Mode *&new_flightmode);
 
 public:

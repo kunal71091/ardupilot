@@ -672,6 +672,22 @@ const AP_Param::GroupInfo AP_OSD_Screen::var_info[] = {
     // @Range: 0 15
     AP_SUBGROUPINFO(aspd2, "ASPD2", 41, AP_OSD_Screen, AP_OSD_Setting),
     
+    // @Param: ASPD1_EN
+    // @DisplayName: ASPD1_EN
+    // @Description: Displays airspeed reported directly from primary airspeed sensor
+    // @Values: 0:Disabled,1:Enabled
+	
+    // @Param: ASPD1_X
+	// @DisplayName: ASPD1_X
+	// @Description: Horizontal position on screen
+	// @Range: 0 29
+	
+	// @Param: ASPD1_Y
+	// @DisplayName: ASPD1_Y
+	// @Description: Vertical position on screen
+	// @Range: 0 15
+    AP_SUBGROUPINFO(aspd1, "ASPD1", 42, AP_OSD_Screen, AP_OSD_Setting),
+    
     AP_GROUPEND
 };
 
@@ -921,7 +937,12 @@ void AP_OSD_Screen::draw_current(uint8_t x, uint8_t y)
     if (!battery.current_amps(amps)) {
         amps = 0;
     }
-    backend->write(x, y, false, "%2.1f%c", (double)amps, SYM_AMP);
+    if (amps < 10.0) {
+        backend->write(x, y, false, "%2.2f%c", amps, SYM_AMP);
+    }
+    else {
+        backend->write(x, y, false, "%2.1f%c", amps, SYM_AMP);
+    }
 }
 
 void AP_OSD_Screen::draw_fltmode(uint8_t x, uint8_t y)
@@ -1028,8 +1049,11 @@ void AP_OSD_Screen::draw_speed_vector(uint8_t x, uint8_t y,Vector2f v, int32_t y
         int32_t interval = 36000 / SYM_ARROW_COUNT;
         arrow = SYM_ARROW_START + ((angle + interval / 2) / interval) % SYM_ARROW_COUNT;
     }
-
-    backend->write(x, y, false, "%c%3d%c", arrow, (int)u_scale(SPEED, v_length), u_icon(SPEED));
+    if (u_scale(SPEED, v_length) < 10.0) {
+        backend->write(x, y, false, "%c%3.1f%c", arrow, u_scale(SPEED, v_length), u_icon(SPEED)); 
+    } else {
+        backend->write(x, y, false, "%c%3d%c", arrow, (int)u_scale(SPEED, v_length), u_icon(SPEED));
+    }
 }
 
 void AP_OSD_Screen::draw_gspeed(uint8_t x, uint8_t y)
@@ -1464,6 +1488,20 @@ void AP_OSD_Screen::draw_bat2used(uint8_t x, uint8_t y)
     draw_batused(1, x, y);
 }
 
+void AP_OSD_Screen::draw_aspd1(uint8_t x, uint8_t y)
+{
+    AP_Airspeed *airspeed = AP_Airspeed::get_singleton();
+    if (!airspeed) {
+        return;
+    }
+    float asp1 = airspeed->get_airspeed();
+    if (airspeed != nullptr && airspeed->healthy()) {
+        backend->write(x, y, false, "%c%4d%c", SYM_ASPD, (int)u_scale(SPEED, asp1), u_icon(SPEED));
+    } else {
+        backend->write(x, y, false, "%c ---%c", SYM_ASPD, u_icon(SPEED));
+    }
+}
+
 void AP_OSD_Screen::draw_aspd2(uint8_t x, uint8_t y)
 {
     AP_Airspeed *airspeed = AP_Airspeed::get_singleton();
@@ -1505,6 +1543,7 @@ void AP_OSD_Screen::draw(void)
     DRAW_SETTING(fltmode);
     DRAW_SETTING(gspeed);
     DRAW_SETTING(aspeed);
+    DRAW_SETTING(aspd1);
     DRAW_SETTING(aspd2);
     DRAW_SETTING(vspeed);
     DRAW_SETTING(throttle);

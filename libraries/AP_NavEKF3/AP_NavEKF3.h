@@ -486,7 +486,6 @@ private:
     struct {
         bool enabled:1;
         bool log_compass:1;
-        bool log_gps:1;
         bool log_baro:1;
         bool log_imu:1;
     } logging;
@@ -496,7 +495,12 @@ private:
 
     // time of last lane switch
     uint32_t lastLaneSwitch_ms;
-    
+
+    /*
+      common intermediate variables used by all cores
+    */
+    void *core_common;
+
     struct {
         uint32_t last_function_call;  // last time getLastYawYawResetAngle was called
         bool core_changed;            // true when a core change happened and hasn't been consumed, false otherwise
@@ -524,6 +528,10 @@ private:
 
     bool inhibitGpsVertVelUse;  // true when GPS vertical velocity use is prohibited
 
+    // origin set by one of the cores
+    struct Location common_EKF_origin;
+    bool common_origin_valid;
+    
     // update the yaw reset data to capture changes due to a lane switch
     // new_primary - index of the ekf instance that we are about to switch to as the primary
     // old_primary - index of the ekf instance that we are currently using as the primary

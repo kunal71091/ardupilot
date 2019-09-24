@@ -118,12 +118,14 @@ class Board:
             '-Werror=shadow',
             '-Werror=return-type',
             '-Werror=unused-result',
+            '-Werror=unused-variable',
             '-Werror=narrowing',
             '-Werror=attributes',
             '-Werror=overflow',
             '-Werror=parentheses',
             '-Werror=format-extra-args',
             '-Werror=delete-non-virtual-dtor',
+            '-Werror=ignored-qualifiers',
         ]
 
         if cfg.options.scripting_checks:
@@ -173,8 +175,10 @@ class Board:
             '-Wno-reorder',
             '-Wno-redundant-decls',
             '-Wno-unknown-pragmas',
+            '-Wno-expansion-to-defined',
             '-Werror=attributes',
             '-Werror=format-security',
+            '-Werror=format-extra-args',
             '-Werror=enum-compare',
             '-Werror=array-bounds',
             '-Werror=uninitialized',
@@ -223,6 +227,11 @@ class Board:
             env.CXXFLAGS += [
                 '-Werror=unused-but-set-variable'
             ]
+            (major, minor, patchlevel) = cfg.env.CC_VERSION
+            if int(major) > 5 or (int(major) == 5 and int(minor) > 1):
+                env.CXXFLAGS += [
+                    '-Werror=suggest-override',
+                ]
 
         if cfg.env.DEBUG:
             env.CXXFLAGS += [
@@ -259,7 +268,7 @@ class Board:
                 cfg.srcnode.find_dir('modules/uavcan/libuavcan/include').abspath()
             ]
 
-        if cfg.env.build_dates:
+        if cfg.options.build_dates:
             env.build_dates = True
 
         # We always want to use PRI format macros
@@ -360,6 +369,7 @@ class sitl(Board):
         ]
 
         cfg.check_librt(env)
+        cfg.check_feenableexcept()
 
         env.LINKFLAGS += ['-pthread',]
         env.AP_LIBRARIES += [
@@ -472,6 +482,9 @@ class chibios(Board):
         env.CXXFLAGS += env.CFLAGS + [
             '-fno-rtti',
             '-fno-threadsafe-statics',
+        ]
+        env.CFLAGS += [
+            '-std=c11'
         ]
 
         if Utils.unversioned_sys_platform() == 'cygwin':

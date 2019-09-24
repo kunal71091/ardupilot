@@ -5,18 +5,13 @@ from __future__ import print_function
 import math
 import os
 
-import pexpect
 from pymavlink import quaternion
 from pymavlink import mavutil
-
-from pysim import util
 
 from common import AutoTest
 from common import AutoTestTimeoutException
 from common import NotAchievedException
 from common import PreconditionFailedException
-
-from MAVProxy.modules.lib import mp_util
 
 # get location of scripts
 testdir = os.path.dirname(os.path.realpath(__file__))
@@ -526,6 +521,31 @@ class AutoTestPlane(AutoTest):
         self.mavproxy.expect("Auto disarmed")
         self.progress("Mission OK")
 
+    def fly_do_reposition(self):
+        self.progress("Takeoff")
+        self.takeoff(alt=50)
+        self.set_rc(3, 1500)
+        self.progress("Entering guided and flying somewhere constant")
+        self.change_mode("GUIDED")
+        loc = self.mav.location()
+        self.location_offset_ne(loc, 500, 500)
+
+        new_alt = 100
+        self.run_cmd_int(
+            mavutil.mavlink.MAV_CMD_DO_REPOSITION,
+            0,
+            0,
+            0,
+            0,
+            int(loc.lat*1e7),
+            int(loc.lng*1e7),
+            new_alt,    # alt
+            frame=mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT_INT,
+        )
+        self.wait_altitude(new_alt-10, new_alt, timeout=30, relative=True)
+
+        self.fly_home_land_and_disarm()
+
     def fly_do_change_speed(self):
         # the following lines ensure we revert these parameter values
         # - DO_CHANGE_AIRSPEED is a permanent vehicle change!
@@ -607,6 +627,9 @@ class AutoTestPlane(AutoTest):
             self.progress("groundspeed and airspeed should be different (have=%f want=%f)" % (delta, want_delta))
             if delta > want_delta:
                 break
+        self.fly_home_land_and_disarm()
+
+    def fly_home_land_and_disarm(self):
         filename = os.path.join(testdir, "flaps.txt")
         self.progress("Using %s to fly home" % filename)
         self.load_mission(filename)
@@ -665,7 +688,6 @@ class AutoTestPlane(AutoTest):
             self.wait_mode('AUTO')
             self.wait_ready_to_arm()
             self.arm_vehicle()
-            tstart = self.get_sim_time_cached()
             last_mission_current_msg = 0
             last_seq = None
             while self.armed():
@@ -771,16 +793,7 @@ class AutoTestPlane(AutoTest):
         self.wait_mode('RTL') # long failsafe
         self.progress("Ensure we've had our throttle squashed to 950")
         self.wait_rc_channel_value(3, 950)
-        m = self.mav.recv_match(type='SYS_STATUS', blocking=True)
-        print("%s" % str(m))
-        m = self.mav.recv_match(type='SYS_STATUS', blocking=True)
-        print("%s" % str(m))
-        m = self.mav.recv_match(type='SYS_STATUS', blocking=True)
-        print("%s" % str(m))
-        m = self.mav.recv_match(type='SYS_STATUS', blocking=True)
-        print("%s" % str(m))
-        m = self.mav.recv_match(type='SYS_STATUS', blocking=True)
-        print("%s" % str(m))
+        self.drain_mav_unparsed()
         m = self.mav.recv_match(type='SYS_STATUS', blocking=True)
         print("%s" % str(m))
         self.progress("Testing receiver enabled")
@@ -794,10 +807,9 @@ class AutoTestPlane(AutoTest):
 #        if (m.onboard_control_sensors_health & receiver_bit):
 #            raise NotAchievedException("Sensor healthy when it shouldn't be")
         self.set_parameter("SIM_RC_FAIL", 0)
-        m = self.mav.recv_match(type='SYS_STATUS', blocking=True)
-        m = self.mav.recv_match(type='SYS_STATUS', blocking=True)
-        m = self.mav.recv_match(type='SYS_STATUS', blocking=True)
-        m = self.mav.recv_match(type='SYS_STATUS', blocking=True)
+        self.drain_mav_unparsed()
+        # have to allow time for RC to be fetched from SITL
+        self.delay_sim_time(0.5)
         m = self.mav.recv_match(type='SYS_STATUS', blocking=True)
         self.progress("Testing receiver enabled")
         if (not (m.onboard_control_sensors_enabled & receiver_bit)):
@@ -807,23 +819,14 @@ class AutoTestPlane(AutoTest):
             raise NotAchievedException("Receiver not present")
         self.progress("Testing receiver health")
         if (not (m.onboard_control_sensors_health & receiver_bit)):
-            raise NotAchievedException("Receiver not healthy")
+            raise NotAchievedException("Receiver not healthy2")
         self.change_mode('MANUAL')
 
         self.progress("Failing receiver (no-pulses)")
         self.set_parameter("SIM_RC_FAIL", 1) # no-pulses
         self.wait_mode('CIRCLE') # short failsafe
         self.wait_mode('RTL') # long failsafe
-        m = self.mav.recv_match(type='SYS_STATUS', blocking=True)
-        print("%s" % str(m))
-        m = self.mav.recv_match(type='SYS_STATUS', blocking=True)
-        print("%s" % str(m))
-        m = self.mav.recv_match(type='SYS_STATUS', blocking=True)
-        print("%s" % str(m))
-        m = self.mav.recv_match(type='SYS_STATUS', blocking=True)
-        print("%s" % str(m))
-        m = self.mav.recv_match(type='SYS_STATUS', blocking=True)
-        print("%s" % str(m))
+        self.drain_mav_unparsed()
         m = self.mav.recv_match(type='SYS_STATUS', blocking=True)
         print("%s" % str(m))
         self.progress("Testing receiver enabled")
@@ -850,6 +853,31 @@ class AutoTestPlane(AutoTest):
         if (not (m.onboard_control_sensors_health & receiver_bit)):
             raise NotAchievedException("Receiver not healthy")
         self.change_mode('MANUAL')
+
+        self.progress("Ensure long failsafe can trigger when short failsafe disabled")
+        self.context_push()
+        ex = None
+        try:
+            self.set_parameter("FS_SHORT_ACTN", 3) # 3 means disabled
+            self.set_parameter("SIM_RC_FAIL", 1)
+            self.wait_statustext("Long event on")
+            self.wait_mode("RTL")
+            self.set_parameter("SIM_RC_FAIL", 0)
+            self.wait_text("Long event off")
+            self.change_mode("MANUAL")
+
+            self.progress("Trying again with THR_FS_VALUE")
+            self.set_parameter("THR_FS_VALUE", 960)
+            self.set_parameter("SIM_RC_FAIL", 2)
+            self.wait_statustext("Long event on")
+            self.wait_mode("RTL")
+        except Exception as e:
+            self.progress("Exception caught:")
+            self.progress(self.get_exception_stacktrace(e))
+            ex = e
+        self.context_pop()
+        if ex is not None:
+            raise ex
 
     def test_gripper_mission(self):
         self.context_push()
@@ -923,7 +951,6 @@ class AutoTestPlane(AutoTest):
             here = self.mav.location()
             got_radius = self.get_distance(loc, here)
             average_radius = 0.95*average_radius + 0.05*got_radius
-            now = self.get_sim_time()
             on_radius = abs(got_radius - want_radius) < epsilon
             m = self.mav.recv_match(type='VFR_HUD', blocking=True)
             heading = m.heading
@@ -959,10 +986,7 @@ class AutoTestPlane(AutoTest):
         try:
             self.progress("Checking for bizarre healthy-when-not-present-or-enabled")
             self.assert_fence_sys_status(False, False, True)
-            fence_filepath = os.path.join(self.mission_directory(),
-                                          "CMAC-fence.txt")
-            self.mavproxy.send("fence load %s\n" % fence_filepath)
-            self.mavproxy.expect("Loaded 6 geo-fence")
+            self.load_fence("CMAC-fence.txt")
             m = self.mav.recv_match(type='FENCE_STATUS', blocking=True, timeout=2)
             if m is not None:
                 raise NotAchievedException("Got FENCE_STATUS unexpectedly");
@@ -997,8 +1021,7 @@ class AutoTestPlane(AutoTest):
 
             # test a rather unfortunate behaviour:
             self.progress("Killing a live fence with fence-clear")
-            self.mavproxy.send("fence load %s\n" % fence_filepath)
-            self.mavproxy.expect("Loaded 6 geo-fence")
+            self.load_fence("CMAC-fence.txt")
             self.set_parameter("FENCE_ACTION", mavutil.mavlink.FENCE_ACTION_RTL)
             self.do_fence_enable()
             self.assert_fence_sys_status(True, True, True)
@@ -1019,10 +1042,7 @@ class AutoTestPlane(AutoTest):
     def test_fence_breach_circle_at(self, loc, disable_on_breach=False):
         ex = None
         try:
-            fence_filepath = os.path.join(self.mission_directory(),
-                                          "CMAC-fence.txt")
-            self.mavproxy.send("fence load %s\n" % fence_filepath)
-            self.mavproxy.expect("Loaded 6 geo-fence")
+            self.load_fence("CMAC-fence.txt")
             want_radius = 100
             # when ArduPlane is fixed, remove this fudge factor
             REALLY_BAD_FUDGE_FACTOR = 1.16
@@ -1078,13 +1098,6 @@ class AutoTestPlane(AutoTest):
         # it as part of the loiter-at-home!
         self.test_fence_breach_circle_at(self.home_position_as_mav_location(),
                                          disable_on_breach=True)
-
-    def location_offset_ne(self, location, north, east):
-        print("old: %f %f" % (location.lat, location.lng))
-        (lat, lng) = mp_util.gps_offset(location.lat, location.lng, east, north)
-        location.lat = lat
-        location.lng = lng
-        print("new: %f %f" % (location.lat, location.lng))
 
     def test_fence_rtl_rally(self):
         ex = None
@@ -1165,7 +1178,7 @@ class AutoTestPlane(AutoTest):
         self.change_mode('MANUAL')
 
         # grab home position:
-        m = self.mav.recv_match(type='HOME_POSITION', blocking=True)
+        self.mav.recv_match(type='HOME_POSITION', blocking=True)
         self.homeloc = self.mav.location()
 
         self.run_subtest("Takeoff", self.takeoff)
@@ -1219,13 +1232,14 @@ class AutoTestPlane(AutoTest):
         ex = None
         self.context_push()
         self.progress("Making sure we don't ordinarily get RANGEFINDER")
+        m = None
         try:
             m = self.mav.recv_match(type='RANGEFINDER',
                                     blocking=True,
                                     timeout=5)
         except Exception as e:
-            print("Caught exception:")
-            self.progress(self.get_exception_stacktrace(e))
+            self.progress("Caught exception: %s" %
+                          self.get_exception_stacktrace(e))
 
         if m is not None:
             raise NotAchievedException("Received unexpected RANGEFINDER msg")
@@ -1241,8 +1255,7 @@ class AutoTestPlane(AutoTest):
             self.change_mode('AUTO')
             self.wait_ready_to_arm()
             self.arm_vehicle()
-            home = self.poll_home_position()
-            self.wait_altitude(10, 1000, timeout=30, relative=True)
+            self.wait_waypoint(5, 5, max_dist=100)
             rf = self.mav.recv_match(type="RANGEFINDER", timeout=1, blocking=True)
             if rf is None:
                 raise NotAchievedException("Did not receive rangefinder message")
@@ -1319,14 +1332,14 @@ class AutoTestPlane(AutoTest):
         self.set_parameter("AVD_ENABLE", 1)
         self.delay_sim_time(1) # TODO: work out why this is required...
         self.mav.mav.adsb_vehicle_send(37, # ICAO address
-                                       here.lat * 1e7,
-                                       here.lng * 1e7,
+                                       int(here.lat * 1e7),
+                                       int(here.lng * 1e7),
                                        mavutil.mavlink.ADSB_ALTITUDE_TYPE_PRESSURE_QNH,
-                                       here.alt*1000 + 10000, # 10m up
+                                       int(here.alt*1000 + 10000), # 10m up
                                        0, # heading in cdeg
                                        0, # horizontal velocity cm/s
                                        0, # vertical velocity cm/s
-                                       "bob", # callsign
+                                       "bob".encode("ascii"), # callsign
                                        mavutil.mavlink.ADSB_EMITTER_TYPE_LIGHT,
                                        1, # time since last communication
                                        65535, # flags
@@ -1362,6 +1375,10 @@ class AutoTestPlane(AutoTest):
 
             ("DO_CHANGE_SPEED", "Test mavlink DO_CHANGE_SPEED command", self.fly_do_change_speed),
 
+            ("DO_REPOSITION",
+             "Test mavlink DO_REPOSITION command",
+             self.fly_do_reposition),
+
             ("MainFlight",
              "Lots of things in one flight",
              self.test_main_flight),
@@ -1395,6 +1412,10 @@ class AutoTestPlane(AutoTest):
             ("ADSB",
              "Test ADSB",
              self.test_adsb),
+
+            ("AdvancedFailsafe",
+             "Test Advanced Failsafe",
+             self.test_advanced_failsafe),
 
             ("LogDownLoad",
              "Log download",

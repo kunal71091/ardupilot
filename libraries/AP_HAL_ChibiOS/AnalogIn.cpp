@@ -30,11 +30,10 @@ extern AP_IOMCU iomcu;
 #include "hwdef/common/stm32_util.h"
 
 #ifndef CHIBIOS_ADC_MAVLINK_DEBUG
+#include <GCS_MAVLink/GCS_MAVLink.h>
 // this allows the first 6 analog channels to be reported by mavlink for debugging purposes
 #define CHIBIOS_ADC_MAVLINK_DEBUG 0
 #endif
-
-#include <GCS_MAVLink/GCS_MAVLink.h>
 
 #define ANLOGIN_DEBUGGING 0
 
@@ -188,7 +187,7 @@ void AnalogIn::adccallback(ADCDriver *adcp)
 {
     const adcsample_t *buffer = samples;
 
-    cacheBufferInvalidate(buffer, sizeof(adcsample_t)*ADC_DMA_BUF_DEPTH*ADC_GRP1_NUM_CHANNELS);
+    stm32_cacheBufferInvalidate(buffer, sizeof(adcsample_t)*ADC_DMA_BUF_DEPTH*ADC_GRP1_NUM_CHANNELS);
     for (uint8_t i = 0; i < ADC_DMA_BUF_DEPTH; i++) {
         for (uint8_t j = 0; j < ADC_GRP1_NUM_CHANNELS; j++) { 
             sample_sum[j] += *buffer++;

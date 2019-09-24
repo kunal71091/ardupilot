@@ -44,7 +44,7 @@ void Rover::init_ardupilot()
     serial_manager.init();
 
     // setup first port early to allow BoardConfig to report errors
-    gcs().chan(0).setup_uart(0);
+    gcs().setup_console();
 
     // Register mavlink_delay_cb, which will run anytime you have
     // more than 5ms remaining in your call to hal.scheduler->delay
@@ -74,8 +74,6 @@ void Rover::init_ardupilot()
     g2.airspeed.init();
 
     g2.windvane.init(serial_manager);
-
-    rover.g2.sailboat.init();
 
     // init baro before we start the GCS, so that the CLI baro test works
     barometer.init();
@@ -129,7 +127,7 @@ void Rover::init_ardupilot()
 
 #if MOUNT == ENABLED
     // initialise camera mount
-    camera_mount.init(serial_manager);
+    camera_mount.init();
 #endif
 
     /*
@@ -155,11 +153,17 @@ void Rover::init_ardupilot()
     // initialise rc channels
     rc().init();
 
+    rover.g2.sailboat.init();
+
     // disable safety if requested
     BoardConfig.init_safety();
 
     // flag that initialisation has completed
     initialised = true;
+
+#if AP_PARAM_KEY_DUMP
+    AP_Param::show_all(hal.console, true);
+#endif
 }
 
 //*********************************************************************************

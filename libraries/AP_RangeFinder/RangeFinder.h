@@ -72,6 +72,7 @@ public:
         RangeFinder_TYPE_BLPing = 23,
         RangeFinder_TYPE_UAVCAN = 24,
         RangeFinder_TYPE_BenewakeTFminiPlus = 25,
+        RangeFinder_TYPE_Lanbao = 26,
     };
 
     enum RangeFinder_Function {
@@ -110,6 +111,9 @@ public:
     uint8_t num_sensors(void) const {
         return num_instances;
     }
+
+    // prearm checks
+    bool prearm_healthy(char *failure_msg, const uint8_t failure_msg_len) const;
 
     // detect and initialise any available rangefinders
     void init(enum Rotation orientation_default);

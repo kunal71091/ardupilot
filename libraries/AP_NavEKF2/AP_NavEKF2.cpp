@@ -596,10 +596,6 @@ void NavEKF2::check_log_write(void)
         AP::logger().Write_Compass(imuSampleTime_us);
         logging.log_compass = false;
     }
-    if (logging.log_gps) {
-        AP::logger().Write_GPS(AP::gps().primary_sensor(), imuSampleTime_us);
-        logging.log_gps = false;
-    }
     if (logging.log_baro) {
         AP::logger().Write_Baro(imuSampleTime_us);
         logging.log_baro = false;
@@ -664,16 +660,27 @@ bool NavEKF2::InitialiseFilter(void)
             gcs().send_text(MAV_SEVERITY_CRITICAL, "NavEKF2: allocation failed");
             return false;
         }
+
+        // allocate common intermediate variable space
+        core_common = (void *)hal.util->malloc_type(NavEKF2_core::get_core_common_size(), AP_HAL::Util::MEM_FAST);
+        if (core_common == nullptr) {
+            _enable.set(0);
+            hal.util->free_type(core, sizeof(NavEKF2_core)*num_cores, AP_HAL::Util::MEM_FAST);
+            core = nullptr;
+            gcs().send_text(MAV_SEVERITY_CRITICAL, "NavEKF2: common allocation failed");
+            return false;
+        }
+
+        //Call Constructors on all cores
         for (uint8_t i = 0; i < num_cores; i++) {
-            //Call Constructors
-            new (&core[i]) NavEKF2_core();
+            new (&core[i]) NavEKF2_core(this);
         }
 
         // set the IMU index for the cores
         num_cores = 0;
         for (uint8_t i=0; i<7; i++) {
             if (_imuMask & (1U<<i)) {
-                if(!core[num_cores].setup_core(this, i, num_cores)) {
+                if(!core[num_cores].setup_core(i, num_cores)) {
                     return false;
                 }
                 num_cores++;
@@ -684,6 +691,9 @@ bool NavEKF2::InitialiseFilter(void)
         primary = 0;
     }
 
+    // invalidate shared origin
+    common_origin_valid = false;
+    
     // initialise the cores. We return success only if all cores
     // initialise successfully
     bool ret = true;
@@ -1096,10 +1106,22 @@ bool NavEKF2::getOriginLLH(int8_t instance, struct Location &loc) const
 // Returns false if the filter has rejected the attempt to set the origin
 bool NavEKF2::setOriginLLH(const Location &loc)
 {
+    if (_fusionModeGPS != 3) {
+        // we don't allow setting of the EKF origin unless we are
+        // flying in non-GPS mode. This is to prevent accidental set
+        // of EKF origin with invalid position or height
+        gcs().send_text(MAV_SEVERITY_WARNING, "EKF2 refusing set origin");
+        return false;
+    }
     if (!core) {
         return false;
     }
-    return core[primary].setOriginLLH(loc);
+    bool ret = false;
+    for (uint8_t i=0; i<num_cores; i++) {
+        ret |= core[i].setOriginLLH(loc);
+    }
+    // return true if any core accepts the new origin
+    return ret;
 }
 
 // return estimated height above ground level
@@ -1595,5 +1617,14 @@ void NavEKF2::writeExtNavData(const Vector3f &sensOffset, const Vector3f &pos, c
             core[i].writeExtNavData(sensOffset, pos, quat, posErr, angErr, timeStamp_ms, resetTime_ms);
         }
     }
+}
+
+// check if external navigation is being used for yaw observation
+bool NavEKF2::isExtNavUsedForYaw() const
+{
+    if (core) {
+        return core[primary].isExtNavUsedForYaw();
+    }
+    return false;
 }
 

@@ -137,7 +137,6 @@ is bob we will attempt to checkout bob-AVR'''
                 return True
             except subprocess.CalledProcessError:
                 self.progress("Checkout branch %s failed" % branch)
-                pass
 
         self.progress("Failed to find tag for %s %s %s %s" %
                       (vehicle, ctag, cboard, cframe))
@@ -173,7 +172,7 @@ is bob we will attempt to checkout bob-AVR'''
     def skip_frame(self, board, frame):
         '''returns true if this board/frame combination should not be built'''
         if frame == "heli":
-            if board in ["bebop", "aerofc-v1", "skyviper-v2450", "CubeSolo", "CubeGreen-solo"]:
+            if board in ["bebop", "aerofc-v1", "skyviper-v2450", "CubeSolo", "CubeGreen-solo", 'skyviper-journey']:
                 self.progress("Skipping heli build for %s" % board)
                 return True
         return False
@@ -514,7 +513,6 @@ is bob we will attempt to checkout bob-AVR'''
 
     def common_boards(self):
         '''returns list of boards common to all vehicles'''
-        # note that while we do not use these for AntennaTracker!
         return ["fmuv2",
                 "fmuv3",
                 "fmuv4",
@@ -534,6 +532,7 @@ is bob we will attempt to checkout bob-AVR'''
                 "MatekF765-Wing",
                 "OMNIBUSF7V2",
                 "sparky2",
+                "omnibusf4",
                 "omnibusf4pro",
                 "omnibusf4v6",
                 "OmnibusNanoV6",
@@ -541,6 +540,7 @@ is bob we will attempt to checkout bob-AVR'''
                 "airbotf4",
                 "revo-mini",
                 "CubeBlack",
+                "CubeBlack+",
                 "CubePurple",
                 "Pixhawk1",
                 "Pixhawk4",
@@ -561,7 +561,7 @@ is bob we will attempt to checkout bob-AVR'''
                 "VRCore-v10",
                 "VRBrain-v54",
                 "TBS-Colibri-F7",
-                "Pixhawk6",
+                "Durandal",
                 "CubeOrange",
                 "CubeYellow",
                 # SITL targets
@@ -572,7 +572,7 @@ is bob we will attempt to checkout bob-AVR'''
     def build_arducopter(self, tag):
         '''build Copter binaries'''
         boards = []
-        boards.extend(["skyviper-v2450", "aerofc-v1", "bebop", "CubeSolo", "CubeGreen-solo"])
+        boards.extend(["skyviper-v2450", "aerofc-v1", "bebop", "CubeSolo", "CubeGreen-solo", "skyviper-journey"])
         boards.extend(self.common_boards()[:])
         self.build_vehicle(tag,
                            "ArduCopter",
@@ -673,6 +673,10 @@ is bob we will attempt to checkout bob-AVR'''
             self.progress("Removing (%s)" % (self.tmpdir,))
             shutil.rmtree(self.tmpdir)
 
+    def buildlogs_dirpath(self):
+        return os.getenv("BUILDLOGS",
+                         os.path.join(os.getcwd(), "..", "buildlogs"))
+
     def run(self):
         self.validate()
 
@@ -706,8 +710,7 @@ is bob we will attempt to checkout bob-AVR'''
 
         self.mkpath(os.path.join("binaries", self.hdate_ym,
                                  self.hdate_ymdhm))
-        self.binaries = os.path.join(os.getcwd(), "..", "buildlogs",
-                                     "binaries")
+        self.binaries = os.path.join(self.buildlogs_dirpath(), "binaries")
         self.basedir = os.getcwd()
         self.error_strings = []
 

@@ -6,11 +6,11 @@ class GCS_MAVLINK_Rover : public GCS_MAVLINK
 {
 public:
 
+    using GCS_MAVLINK::GCS_MAVLINK;
+
 protected:
 
     uint32_t telem_delay() const override;
-
-    AP_AdvancedFailsafe *get_advanced_failsafe() const override;
 
     uint8_t sysid_my_gcs() const override;
     bool sysid_enforce() const override;

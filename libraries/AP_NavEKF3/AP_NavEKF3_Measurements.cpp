@@ -582,12 +582,17 @@ void NavEKF3_core::readGpsData()
             // Post-alignment checks
             calcGpsGoodForFlight();
 
+            // see if we can get an origin from the frontend
+            if (!validOrigin && frontend->common_origin_valid) {
+                setOrigin(frontend->common_EKF_origin);
+            }
+
             // Read the GPS location in WGS-84 lat,long,height coordinates
             const struct Location &gpsloc = gps.location();
 
             // Set the EKF origin and magnetic field declination if not previously set and GPS checks have passed
             if (gpsGoodToAlign && !validOrigin) {
-                setOrigin();
+                setOrigin(gpsloc);
 
                 // set the NE earth magnetic field states using the published declination
                 // and set the corresponding variances and covariances
@@ -614,8 +619,6 @@ void NavEKF3_core::readGpsData()
                 gpsNotAvailable = false;
             }
 
-            frontend->logging.log_gps = true;
-
             // if the GPS has yaw data then input that as well
             float yaw_deg, yaw_accuracy_deg;
             if (AP::gps().gps_yaw_deg(yaw_deg, yaw_accuracy_deg)) {
@@ -625,6 +628,7 @@ void NavEKF3_core::readGpsData()
         } else {
             // report GPS fix status
             gpsCheckStatus.bad_fix = true;
+            hal.util->snprintf(prearm_fail_string, sizeof(prearm_fail_string), "Waiting for 3D fix");
         }
     }
 }

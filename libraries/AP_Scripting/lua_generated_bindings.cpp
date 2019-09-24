@@ -14,6 +14,12 @@
 #include <AP_Common/Location.h>
 
 
+#if !defined(AP_TERRAIN_AVAILABLE) || (AP_TERRAIN_AVAILABLE != 1)
+  #error Scripting requires terrain to be available
+
+#endif // !defined(AP_TERRAIN_AVAILABLE) || (AP_TERRAIN_AVAILABLE != 1)
+
+
 static int binding_argcheck(lua_State *L, int expected_arg_count) {
     const int args = lua_gettop(L);
     if (args > expected_arg_count) {
@@ -262,35 +268,34 @@ static int Location_lat(lua_State *L) {
 static int Vector2f_is_zero(lua_State *L) {
     binding_argcheck(L, 1);
     Vector2f * ud = check_Vector2f(L, 1);
-    ud->is_zero(
-        );
+    const bool data = ud->is_zero();
 
-    return 0;
+    lua_pushboolean(L, data);
+    return 1;
 }
 
 static int Vector2f_is_inf(lua_State *L) {
     binding_argcheck(L, 1);
     Vector2f * ud = check_Vector2f(L, 1);
-    ud->is_inf(
-        );
+    const bool data = ud->is_inf();
 
-    return 0;
+    lua_pushboolean(L, data);
+    return 1;
 }
 
 static int Vector2f_is_nan(lua_State *L) {
     binding_argcheck(L, 1);
     Vector2f * ud = check_Vector2f(L, 1);
-    ud->is_nan(
-        );
+    const bool data = ud->is_nan();
 
-    return 0;
+    lua_pushboolean(L, data);
+    return 1;
 }
 
 static int Vector2f_normalize(lua_State *L) {
     binding_argcheck(L, 1);
     Vector2f * ud = check_Vector2f(L, 1);
-    ud->normalize(
-        );
+    ud->normalize();
 
     return 0;
 }
@@ -298,8 +303,7 @@ static int Vector2f_normalize(lua_State *L) {
 static int Vector2f_length(lua_State *L) {
     binding_argcheck(L, 1);
     Vector2f * ud = check_Vector2f(L, 1);
-    const float data = ud->length(
-        );
+    const float data = ud->length();
 
     lua_pushnumber(L, data);
     return 1;
@@ -326,35 +330,34 @@ static int Vector2f___sub(lua_State *L) {
 static int Vector3f_is_zero(lua_State *L) {
     binding_argcheck(L, 1);
     Vector3f * ud = check_Vector3f(L, 1);
-    ud->is_zero(
-        );
+    const bool data = ud->is_zero();
 
-    return 0;
+    lua_pushboolean(L, data);
+    return 1;
 }
 
 static int Vector3f_is_inf(lua_State *L) {
     binding_argcheck(L, 1);
     Vector3f * ud = check_Vector3f(L, 1);
-    ud->is_inf(
-        );
+    const bool data = ud->is_inf();
 
-    return 0;
+    lua_pushboolean(L, data);
+    return 1;
 }
 
 static int Vector3f_is_nan(lua_State *L) {
     binding_argcheck(L, 1);
     Vector3f * ud = check_Vector3f(L, 1);
-    ud->is_nan(
-        );
+    const bool data = ud->is_nan();
 
-    return 0;
+    lua_pushboolean(L, data);
+    return 1;
 }
 
 static int Vector3f_normalize(lua_State *L) {
     binding_argcheck(L, 1);
     Vector3f * ud = check_Vector3f(L, 1);
-    ud->normalize(
-        );
+    ud->normalize();
 
     return 0;
 }
@@ -362,8 +365,7 @@ static int Vector3f_normalize(lua_State *L) {
 static int Vector3f_length(lua_State *L) {
     binding_argcheck(L, 1);
     Vector3f * ud = check_Vector3f(L, 1);
-    const float data = ud->length(
-        );
+    const float data = ud->length();
 
     lua_pushnumber(L, data);
     return 1;
@@ -483,6 +485,7 @@ static int GCS_send_text(lua_State *L) {
     const char * data_3 = luaL_checkstring(L, 3);
     ud->send_text(
             data_2,
+            "%s",
             data_3);
 
     return 0;
@@ -574,31 +577,6 @@ static int AP_Terrain_height_above_terrain(lua_State *L) {
     return 1;
 }
 
-static int AP_Terrain_height_relative_home_equivalent(lua_State *L) {
-    AP_Terrain * ud = AP_Terrain::get_singleton();
-    if (ud == nullptr) {
-        return luaL_argerror(L, 1, "terrain not supported on this firmware");
-    }
-
-    binding_argcheck(L, 3);
-    const float raw_data_2 = luaL_checknumber(L, 2);
-    luaL_argcheck(L, ((raw_data_2 >= MAX(-FLT_MAX, -INFINITY)) && (raw_data_2 <= MIN(FLT_MAX, INFINITY))), 2, "argument out of range");
-    const float data_2 = raw_data_2;
-    float data_5003 = {};
-    const bool data_4 = static_cast<bool>(lua_toboolean(L, 4));
-    const bool data = ud->height_relative_home_equivalent(
-            data_2,
-            data_5003,
-            data_4);
-
-    if (data) {
-        lua_pushnumber(L, data_5003);
-    } else {
-        lua_pushnil(L);
-    }
-    return 1;
-}
-
 static int AP_Terrain_height_terrain_difference_home(lua_State *L) {
     AP_Terrain * ud = AP_Terrain::get_singleton();
     if (ud == nullptr) {
@@ -650,8 +628,7 @@ static int AP_Terrain_status(lua_State *L) {
     }
 
     binding_argcheck(L, 1);
-    const uint8_t data = ud->status(
-        );
+    const uint8_t data = ud->status();
 
     lua_pushinteger(L, data);
     return 1;
@@ -664,8 +641,7 @@ static int AP_Terrain_enabled(lua_State *L) {
     }
 
     binding_argcheck(L, 1);
-    const bool data = ud->enabled(
-        );
+    const bool data = ud->enabled();
 
     lua_pushboolean(L, data);
     return 1;
@@ -678,8 +654,7 @@ static int RangeFinder_num_sensors(lua_State *L) {
     }
 
     binding_argcheck(L, 1);
-    const uint8_t data = ud->num_sensors(
-        );
+    const uint8_t data = ud->num_sensors();
 
     lua_pushinteger(L, data);
     return 1;
@@ -706,24 +681,15 @@ static int AP_GPS_first_unconfigured_gps(lua_State *L) {
     }
 
     binding_argcheck(L, 1);
-    const uint8_t data = ud->first_unconfigured_gps(
-        );
+    uint8_t data_5002 = {};
+    const bool data = ud->first_unconfigured_gps(
+            data_5002);
 
-    lua_pushinteger(L, data);
-    return 1;
-}
-
-static int AP_GPS_all_configured(lua_State *L) {
-    AP_GPS * ud = AP_GPS::get_singleton();
-    if (ud == nullptr) {
-        return luaL_argerror(L, 1, "gps not supported on this firmware");
+    if (data) {
+        lua_pushinteger(L, data_5002);
+    } else {
+        lua_pushnil(L);
     }
-
-    binding_argcheck(L, 1);
-    const bool data = ud->all_configured(
-        );
-
-    lua_pushboolean(L, data);
     return 1;
 }
 
@@ -1047,8 +1013,7 @@ static int AP_GPS_primary_sensor(lua_State *L) {
     }
 
     binding_argcheck(L, 1);
-    const uint8_t data = ud->primary_sensor(
-        );
+    const uint8_t data = ud->primary_sensor();
 
     lua_pushinteger(L, data);
     return 1;
@@ -1061,8 +1026,7 @@ static int AP_GPS_num_sensors(lua_State *L) {
     }
 
     binding_argcheck(L, 1);
-    const uint8_t data = ud->num_sensors(
-        );
+    const uint8_t data = ud->num_sensors();
 
     lua_pushinteger(L, data);
     return 1;
@@ -1115,8 +1079,7 @@ static int AP_BattMonitor_has_failsafed(lua_State *L) {
     }
 
     binding_argcheck(L, 1);
-    const bool data = ud->has_failsafed(
-        );
+    const bool data = ud->has_failsafed();
 
     lua_pushboolean(L, data);
     return 1;
@@ -1283,8 +1246,7 @@ static int AP_BattMonitor_num_instances(lua_State *L) {
     }
 
     binding_argcheck(L, 1);
-    const uint8_t data = ud->num_instances(
-        );
+    const uint8_t data = ud->num_instances();
 
     lua_pushinteger(L, data);
     return 1;
@@ -1296,12 +1258,8 @@ static int AP_Arming_arm(lua_State *L) {
         return luaL_argerror(L, 1, "arming not supported on this firmware");
     }
 
-    binding_argcheck(L, 2);
-    const lua_Integer raw_data_2 = luaL_checkinteger(L, 2);
-    luaL_argcheck(L, ((raw_data_2 >= static_cast<int32_t>(AP_Arming::Method::RUDDER)) && (raw_data_2 <= static_cast<int32_t>(AP_Arming::Method::MOTORTEST))), 2, "argument out of range");
-    const AP_Arming::Method data_2 = static_cast<AP_Arming::Method>(raw_data_2);
-    const bool data = ud->arm(
-            data_2);
+    binding_argcheck(L, 1);
+    const bool data = ud->arm(            AP_Arming::Method::SCRIPTING);
 
     lua_pushboolean(L, data);
     return 1;
@@ -1314,8 +1272,7 @@ static int AP_Arming_is_armed(lua_State *L) {
     }
 
     binding_argcheck(L, 1);
-    const bool data = ud->is_armed(
-        );
+    const bool data = ud->is_armed();
 
     lua_pushboolean(L, data);
     return 1;
@@ -1328,8 +1285,7 @@ static int AP_Arming_disarm(lua_State *L) {
     }
 
     binding_argcheck(L, 1);
-    const bool data = ud->disarm(
-        );
+    const bool data = ud->disarm();
 
     lua_pushboolean(L, data);
     return 1;
@@ -1343,8 +1299,7 @@ static int AP_AHRS_prearm_healthy(lua_State *L) {
 
     binding_argcheck(L, 1);
     ud->get_semaphore().take_blocking();
-    const bool data = ud->prearm_healthy(
-        );
+    const bool data = ud->prearm_healthy();
 
     ud->get_semaphore().give();
     lua_pushboolean(L, data);
@@ -1359,8 +1314,7 @@ static int AP_AHRS_home_is_set(lua_State *L) {
 
     binding_argcheck(L, 1);
     ud->get_semaphore().take_blocking();
-    const bool data = ud->home_is_set(
-        );
+    const bool data = ud->home_is_set();
 
     ud->get_semaphore().give();
     lua_pushboolean(L, data);
@@ -1419,8 +1373,7 @@ static int AP_AHRS_groundspeed_vector(lua_State *L) {
 
     binding_argcheck(L, 1);
     ud->get_semaphore().take_blocking();
-    const Vector2f &data = ud->groundspeed_vector(
-        );
+    const Vector2f &data = ud->groundspeed_vector();
 
     ud->get_semaphore().give();
     new_Vector2f(L);
@@ -1436,8 +1389,7 @@ static int AP_AHRS_wind_estimate(lua_State *L) {
 
     binding_argcheck(L, 1);
     ud->get_semaphore().take_blocking();
-    const Vector3f &data = ud->wind_estimate(
-        );
+    const Vector3f &data = ud->wind_estimate();
 
     ud->get_semaphore().give();
     new_Vector3f(L);
@@ -1474,8 +1426,7 @@ static int AP_AHRS_get_gyro(lua_State *L) {
 
     binding_argcheck(L, 1);
     ud->get_semaphore().take_blocking();
-    const Vector3f &data = ud->get_gyro(
-        );
+    const Vector3f &data = ud->get_gyro();
 
     ud->get_semaphore().give();
     new_Vector3f(L);
@@ -1491,8 +1442,7 @@ static int AP_AHRS_get_home(lua_State *L) {
 
     binding_argcheck(L, 1);
     ud->get_semaphore().take_blocking();
-    const Location &data = ud->get_home(
-        );
+    const Location &data = ud->get_home();
 
     ud->get_semaphore().give();
     new_Location(L);
@@ -1530,8 +1480,7 @@ static int AP_AHRS_get_yaw(lua_State *L) {
 
     binding_argcheck(L, 1);
     ud->get_semaphore().take_blocking();
-    const float data = ud->get_yaw(
-        );
+    const float data = ud->get_yaw();
 
     ud->get_semaphore().give();
     lua_pushnumber(L, data);
@@ -1546,8 +1495,7 @@ static int AP_AHRS_get_pitch(lua_State *L) {
 
     binding_argcheck(L, 1);
     ud->get_semaphore().take_blocking();
-    const float data = ud->get_pitch(
-        );
+    const float data = ud->get_pitch();
 
     ud->get_semaphore().give();
     lua_pushnumber(L, data);
@@ -1562,8 +1510,7 @@ static int AP_AHRS_get_roll(lua_State *L) {
 
     binding_argcheck(L, 1);
     ud->get_semaphore().take_blocking();
-    const float data = ud->get_roll(
-        );
+    const float data = ud->get_roll();
 
     ud->get_semaphore().give();
     lua_pushnumber(L, data);
@@ -1585,7 +1532,6 @@ const luaL_Reg AP_Relay_meta[] = {
 
 const luaL_Reg AP_Terrain_meta[] = {
     {"height_above_terrain", AP_Terrain_height_above_terrain},
-    {"height_relative_home_equivalent", AP_Terrain_height_relative_home_equivalent},
     {"height_terrain_difference_home", AP_Terrain_height_terrain_difference_home},
     {"height_amsl", AP_Terrain_height_amsl},
     {"status", AP_Terrain_status},
@@ -1609,7 +1555,6 @@ const luaL_Reg notify_meta[] = {
 
 const luaL_Reg AP_GPS_meta[] = {
     {"first_unconfigured_gps", AP_GPS_first_unconfigured_gps},
-    {"all_configured", AP_GPS_all_configured},
     {"get_antenna_offset", AP_GPS_get_antenna_offset},
     {"have_vertical_velocity", AP_GPS_have_vertical_velocity},
     {"last_message_time_ms", AP_GPS_last_message_time_ms},
@@ -1677,6 +1622,12 @@ struct userdata_enum {
     int value;
 };
 
+struct userdata_enum AP_Terrain_enums[] = {
+    {"TerrainStatusOK", AP_Terrain::TerrainStatusOK},
+    {"TerrainStatusUnhealthy", AP_Terrain::TerrainStatusUnhealthy},
+    {"TerrainStatusDisabled", AP_Terrain::TerrainStatusDisabled},
+    {NULL, 0}};
+
 struct userdata_enum AP_GPS_enums[] = {
     {"GPS_OK_FIX_3D_RTK_FIXED", AP_GPS::GPS_OK_FIX_3D_RTK_FIXED},
     {"GPS_OK_FIX_3D_RTK_FLOAT", AP_GPS::GPS_OK_FIX_3D_RTK_FLOAT},
@@ -1702,7 +1653,7 @@ const struct userdata_meta userdata_fun[] = {
 const struct userdata_meta singleton_fun[] = {
     {"gcs", GCS_meta, NULL},
     {"relay", AP_Relay_meta, NULL},
-    {"terrain", AP_Terrain_meta, NULL},
+    {"terrain", AP_Terrain_meta, AP_Terrain_enums},
     {"rangefinder", RangeFinder_meta, NULL},
     {"AP_Notify", AP_Notify_meta, NULL},
     {"notify", notify_meta, NULL},

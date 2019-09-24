@@ -352,6 +352,9 @@ public:
     // write EKF information to on-board logs
     void Log_Write();
 
+    // check if external navigation is being used for yaw observation
+    bool isExtNavUsedForYaw(void) const;
+
 private:
     uint8_t num_cores; // number of allocated cores
     uint8_t primary;   // current primary core
@@ -447,10 +450,13 @@ private:
     const float gndEffectBaroScaler = 4.0f;        // scaler applied to the barometer observation variance when ground effect mode is active
     const uint8_t fusionTimeStep_ms = 10;          // The minimum time interval between covariance predictions and measurement fusions in msec
 
+    // origin set by one of the cores
+    struct Location common_EKF_origin;
+    bool common_origin_valid;
+
     struct {
         bool enabled:1;
         bool log_compass:1;
-        bool log_gps:1;
         bool log_baro:1;
         bool log_imu:1;
     } logging;
@@ -485,6 +491,11 @@ private:
 
     // time of last lane switch
     uint32_t lastLaneSwitch_ms;
+
+    /*
+      common intermediate variables used by all cores
+    */
+    void *core_common;
 
     // update the yaw reset data to capture changes due to a lane switch
     // new_primary - index of the ekf instance that we are about to switch to as the primary

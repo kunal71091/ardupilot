@@ -276,7 +276,7 @@ void AP_ADSB::update(void)
         }
         out_state.cfg.ICAO_id_param_prev = out_state.cfg.ICAO_id_param;
         set_callsign("PING", true);
-        gcs().send_text(MAV_SEVERITY_INFO, "ADSB: Using ICAO_id %d and Callsign %s", out_state.cfg.ICAO_id, out_state.cfg.callsign);
+        gcs().send_text(MAV_SEVERITY_INFO, "ADSB: Using ICAO_id %d and Callsign %s", (int)out_state.cfg.ICAO_id, out_state.cfg.callsign);
         out_state.last_config_ms = 0; // send now
     }
 
@@ -714,7 +714,7 @@ void AP_ADSB::handle_out_cfg(const mavlink_message_t &msg)
     // guard against string with non-null end char
     const char c = out_state.cfg.callsign[MAVLINK_MSG_UAVIONIX_ADSB_OUT_CFG_FIELD_CALLSIGN_LEN-1];
     out_state.cfg.callsign[MAVLINK_MSG_UAVIONIX_ADSB_OUT_CFG_FIELD_CALLSIGN_LEN-1] = 0;
-    gcs().send_text(MAV_SEVERITY_INFO, "ADSB: Using ICAO_id %d and Callsign %s", out_state.cfg.ICAO_id, out_state.cfg.callsign);
+    gcs().send_text(MAV_SEVERITY_INFO, "ADSB: Using ICAO_id %d and Callsign %s", (int)out_state.cfg.ICAO_id, out_state.cfg.callsign);
     out_state.cfg.callsign[MAVLINK_MSG_UAVIONIX_ADSB_OUT_CFG_FIELD_CALLSIGN_LEN-1] = c;
 
     // send now
@@ -844,12 +844,12 @@ void AP_ADSB::set_callsign(const char* str, const bool append_icao)
 
 void AP_ADSB::push_sample(adsb_vehicle_t &vehicle)
 {
-    samples.push_back(vehicle);
+    samples.push(vehicle);
 }
 
 bool AP_ADSB::next_sample(adsb_vehicle_t &vehicle)
 {
-    return samples.pop_front(vehicle);
+    return samples.pop(vehicle);
 }
 
 void AP_ADSB::handle_message(const mavlink_channel_t chan, const mavlink_message_t &msg)
