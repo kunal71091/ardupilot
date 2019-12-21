@@ -143,14 +143,11 @@ public:
     AP_Int16 pin_mask; // for GPIO emulation
     AP_Float speedup; // simulation speedup
     AP_Int8  odom_enable; // enable visual odomotry data
-<<<<<<< HEAD
     AP_Float mag_scaling; // scaling factor on first compasses
-=======
     AP_Int8  telem_baudlimit_enable; // enable baudrate limiting on links
     AP_Float flow_noise; // optical flow measurement noise (rad/sec)
     AP_Int8  baro_count; // number of simulated baros to create
     AP_Int8 gps_hdg_enabled; // enable the output of a NMEA heading HDT sentence
->>>>>>> 5800f303e7... SITL: Create gps_hdt_enabled varible for enable/disable HDT GPS sentence
 
     // wind control
     enum WindType {

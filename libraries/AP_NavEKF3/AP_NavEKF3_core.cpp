@@ -401,9 +401,6 @@ void NavEKF3_core::InitialiseVariables()
     storedRangeBeacon.reset();
     storedBodyOdm.reset();
     storedWheelOdm.reset();
-<<<<<<< HEAD
-=======
-
     InitialiseVariablesMag();
 }
 
@@ -435,7 +432,6 @@ void NavEKF3_core::InitialiseVariablesMag()
     magFieldLearned = false;
     storedMag.reset();
     storedYawAng.reset();
->>>>>>> e9f840531a... AP_NavEKF3: Add data buffers for yaw sensor
 }
 
 // Initialise the states from accelerometer and magnetometer data (if present)

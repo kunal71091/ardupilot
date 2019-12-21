@@ -145,21 +145,11 @@ public:
         float speed_accuracy;               ///< 3D velocity RMS accuracy estimate in m/s
         float horizontal_accuracy;          ///< horizontal RMS accuracy estimate in m
         float vertical_accuracy;            ///< vertical RMS accuracy estimate in m
-<<<<<<< HEAD
-        bool have_vertical_velocity:1;      ///< does GPS give vertical velocity? Set to true only once available.
-        bool have_speed_accuracy:1;         ///< does GPS give speed accuracy? Set to true only once available.
-        bool have_horizontal_accuracy:1;    ///< does GPS give horizontal position accuracy? Set to true only once available.
-        bool have_vertical_accuracy:1;      ///< does GPS give vertical position accuracy? Set to true only once available.
-=======
         bool have_vertical_velocity;      ///< does GPS give vertical velocity? Set to true only once available.
         bool have_speed_accuracy;         ///< does GPS give speed accuracy? Set to true only once available.
         bool have_horizontal_accuracy;    ///< does GPS give horizontal position accuracy? Set to true only once available.
         bool have_vertical_accuracy;      ///< does GPS give vertical position accuracy? Set to true only once available.
         bool have_gps_yaw;                ///< does GPS give yaw? Set to true only once available.
-<<<<<<< HEAD
->>>>>>> 896b5fc6e2... AP_GPS: Adding support for the NMEA GPHDT sentence
-=======
->>>>>>> 896b5fc6e2... AP_GPS: Adding support for the NMEA GPHDT sentence
         uint32_t last_gps_time_ms;          ///< the system time we got the last GPS timestamp, milliseconds
 
         // all the following fields must only all be filled by RTK capable backend drivers
@@ -361,8 +351,6 @@ public:
         return have_vertical_velocity(primary_instance);
     }
 
-<<<<<<< HEAD
-<<<<<<< HEAD
     // return number of satellites used for RTK calculation
     uint8_t rtk_num_sats(uint8_t instance) const {
         return state[instance].rtk_num_sats;
@@ -379,9 +367,6 @@ public:
         return rtk_age_ms(primary_instance);
     }
 
-=======
-=======
->>>>>>> 896b5fc6e2... AP_GPS: Adding support for the NMEA GPHDT sentence
     // return true if the GPS supports yaw
     bool have_gps_yaw(uint8_t instance) const {
         return state[instance].have_gps_yaw;
@@ -390,10 +375,6 @@ public:
         return have_gps_yaw(primary_instance);
     }
     
-<<<<<<< HEAD
->>>>>>> 896b5fc6e2... AP_GPS: Adding support for the NMEA GPHDT sentence
-=======
->>>>>>> 896b5fc6e2... AP_GPS: Adding support for the NMEA GPHDT sentence
     // the expected lag (in seconds) in the position and velocity readings from the gps
     // return true if the GPS hardware configuration is known or the lag parameter has been set manually
     bool get_lag(uint8_t instance, float &lag_sec) const;

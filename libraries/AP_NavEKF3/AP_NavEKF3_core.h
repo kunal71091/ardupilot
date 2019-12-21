@@ -684,20 +684,19 @@ private:
     // force alignment of the yaw angle using GPS velocity data
     void realignYawGPS();
 
-<<<<<<< HEAD
-    // initialise the earth magnetic field states using declination and current attitude and magnetometer meaasurements
-=======
     // initialise the earth magnetic field states using declination and current attitude and magnetometer measurements
 
     // align the yaw angle for the quaternion states using the external yaw sensor
     void alignYawAngle();
 
->>>>>>> c8435c17a5... AP_NavEKF3: Add function to reset yaw to external measurement
     // and return attitude quaternion
     Quaternion calcQuatAndFieldStates(float roll, float pitch);
 
     // zero stored variables
     void InitialiseVariables();
+
+    // zero stored variables related to mag
+    void InitialiseVariablesMag();
 
     // reset the horizontal position states uing the last GPS measurement
     void ResetPosition(void);
@@ -1127,21 +1126,11 @@ private:
     wheel_odm_elements wheelOdmDataNew;       // Body frame odometry data at the current time horizon
     wheel_odm_elements wheelOdmDataDelayed;   // Body  frame odometry data at the fusion time horizon
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
     // yaw sensor fusion
     uint32_t yawMeasTime_ms;
     obs_ring_buffer_t<yaw_elements> storedYawAng;
     yaw_elements yawAngDataNew;
     yaw_elements yawAngDataDelayed;
->>>>>>> 4bd2764e9e... AP_NavEKF3: Add push to buffer for external yaw sensor data
-=======
-    // yaw sensor fusion
-    obs_ring_buffer_t<yaw_elements> storedYawAng;
-    yaw_elements yawAngDataNew;
-    yaw_elements yawAngDataDelayed;
->>>>>>> e9f840531a... AP_NavEKF3: Add data buffers for yaw sensor
 
     // Range Beacon Sensor Fusion
     obs_ring_buffer_t<rng_bcn_elements> storedRangeBeacon; // Beacon range buffer

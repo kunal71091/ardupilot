@@ -1092,19 +1092,11 @@ struct PACKED log_DSTL {
 #define GPA_UNITS "smmmn-ss"
 #define GPA_MULTS "FBBBB-CF"
 
-<<<<<<< HEAD:libraries/DataFlash/LogStructure.h
-// see "struct GPS_State" and "Log_Write_GPS":
-#define GPS_LABELS "TimeUS,Status,GMS,GWk,NSats,HDop,Lat,Lng,Alt,Spd,GCrs,VZ,U"
-#define GPS_FMT   "QBIHBcLLefffB"
-#define GPS_UNITS "s---SmDUmnhn-"
-#define GPS_MULTS "F---0BGGB000-"
-=======
 // see "struct GPS_State" and "Write_GPS":
 #define GPS_LABELS "TimeUS,Status,GMS,GWk,NSats,HDop,Lat,Lng,Alt,Spd,GCrs,VZ,Yaw,U"
 #define GPS_FMT   "QBIHBcLLeffffB"
 #define GPS_UNITS "s---SmDUmnhnh-"
 #define GPS_MULTS "F---0BGGB000--"
->>>>>>> cc02b8f460... AP_Logger: added logging of GPS yaw:libraries/AP_Logger/LogStructure.h
 
 #define GYR_LABELS "TimeUS,SampleUS,GyrX,GyrY,GyrZ"
 #define GYR_FMT    "QQfff"
