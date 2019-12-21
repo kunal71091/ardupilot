@@ -297,7 +297,7 @@ void NavEKF2_core::setAidingMode()
         case AID_ABSOLUTE: {
             bool canUseGPS = ((frontend->_fusionModeGPS) != 3 && readyToUseGPS() && !gpsInhibit);
             bool canUseRangeBeacon = readyToUseRangeBeacon();
-            bool canUseExtNav = readyToUseExtNav();
+            bool canUseExtNav = false;//readyToUseExtNav(); //dont use extnav, rely on gps
             // We have commenced aiding and GPS usage is allowed
             if (canUseGPS) {
                 gcs().send_text(MAV_SEVERITY_INFO, "EKF2 IMU%u is using GPS",(unsigned)imu_index);

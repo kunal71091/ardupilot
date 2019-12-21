@@ -8,6 +8,8 @@
 #include <AP_GPS/AP_GPS.h>
 #include <AP_Baro/AP_Baro.h>
 
+#include <GCS_MAVLink/GCS.h>
+
 #include <stdio.h>
 
 extern const AP_HAL::HAL& hal;
@@ -228,6 +230,7 @@ bool NavEKF2_core::resetHeightDatum(void)
 // select fusion of velocity, position and height measurements
 void NavEKF2_core::SelectVelPosFusion()
 {
+    //gcs().send_text(MAV_SEVERITY_CRITICAL, "In selectVelPoseFusion");
     // Check if the magnetometer has been fused on that time step and the filter is running at faster than 200 Hz
     // If so, don't fuse measurements on this time step to reduce frame over-runs
     // Only allow one time slip to prevent high rate magnetometer data preventing fusion of other measurements
@@ -246,6 +249,7 @@ void NavEKF2_core::SelectVelPosFusion()
     gpsDataToFuse = storedGPS.recall(gpsDataDelayed,imuDataDelayed.time_ms);
     // Determine if we need to fuse position and velocity data on this time step
     if (gpsDataToFuse && PV_AidingMode == AID_ABSOLUTE) {
+        //gcs().send_text(MAV_SEVERITY_CRITICAL, "In GPS data to fuse");
         // set fusion request flags
         if (frontend->_fusionModeGPS <= 1) {
             fuseVelData = true;
@@ -286,11 +290,12 @@ void NavEKF2_core::SelectVelPosFusion()
 
     } else if (extNavDataToFuse && PV_AidingMode == AID_ABSOLUTE) {
         // This is a special case that uses and external nav system for position
-        extNavUsedForPos = true;
-        activeHgtSource = HGT_SOURCE_EV;
+        //gcs().send_text(MAV_SEVERITY_CRITICAL, "in ext nav data to fuse");
+        extNavUsedForPos = false;
+        //activeHgtSource = HGT_SOURCE_EV;
         fuseVelData = false;
-        fuseHgtData = true;
-        fusePosData = true;
+        fuseHgtData = false; //only use extnav for yaw
+        fusePosData = false;
         velPosObs[3] = extNavDataDelayed.pos.x;
         velPosObs[4] = extNavDataDelayed.pos.y;
         velPosObs[5] = extNavDataDelayed.pos.z;
@@ -298,6 +303,7 @@ void NavEKF2_core::SelectVelPosFusion()
         // if compass is disabled, also use it for yaw
         if (!use_compass()) {
             extNavUsedForYaw = true;
+            //gcs().send_text(MAV_SEVERITY_CRITICAL, "using ext nav for yaw");
             if (!yawAlignComplete) {
                 extNavYawResetRequest = true;
                 magYawResetRequest = false;
@@ -305,6 +311,7 @@ void NavEKF2_core::SelectVelPosFusion()
                 controlMagYawReset();
                 finalInflightYawInit = true;
             } else {
+                //gcs().send_text(MAV_SEVERITY_CRITICAL, "before entering fuse euler yaw in extnavdatatofuse true");
                 fuseEulerYaw();
             }
         } else {
@@ -312,6 +319,7 @@ void NavEKF2_core::SelectVelPosFusion()
         }
 
     } else {
+        //gcs().send_text(MAV_SEVERITY_CRITICAL, "in else");
         fuseVelData = false;
         fusePosData = false;
     }
@@ -884,6 +892,7 @@ void NavEKF2_core::selectHeightForFusion()
 
     // Select the height measurement source
     if (extNavDataToFuse && (activeHgtSource == HGT_SOURCE_EV)) {
+        //gcs().send_text(MAV_SEVERITY_CRITICAL, "Using vision for Height");
         hgtMea = -extNavDataDelayed.pos.z;
         posDownObsNoise = sq(constrain_float(extNavDataDelayed.posErr, 0.01f, 10.0f));
     } else if (rangeDataToFuse && (activeHgtSource == HGT_SOURCE_RNG)) {
@@ -907,6 +916,7 @@ void NavEKF2_core::selectHeightForFusion()
         }
     } else if  (gpsDataToFuse && (activeHgtSource == HGT_SOURCE_GPS)) {
         // using GPS data
+        //gcs().send_text(MAV_SEVERITY_CRITICAL, "Using GPS for Height");
         hgtMea = gpsDataDelayed.hgt;
         // enable fusion
         velPosObs[5] = -hgtMea;
@@ -918,6 +928,7 @@ void NavEKF2_core::selectHeightForFusion()
             posDownObsNoise = sq(constrain_float(1.5f * frontend->_gpsHorizPosNoise, 0.1f, 10.0f));
         }
     } else if (baroDataToFuse && (activeHgtSource == HGT_SOURCE_BARO)) {
+        //gcs().send_text(MAV_SEVERITY_CRITICAL, "Using Baro for Height");
         // using Baro data
         hgtMea = baroDataDelayed.hgt - baroHgtOffset;
         // enable fusion

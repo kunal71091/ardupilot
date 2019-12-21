@@ -815,15 +815,18 @@ void NavEKF2_core::fuseEulerYaw()
         stateStruct.quat.to_euler(euler321.x, euler321.y, euler321.z);
         predicted_yaw = euler321.z;
         if (use_compass() && yawAlignComplete && magStateInitComplete) {
+            //gcs().send_text(MAV_SEVERITY_CRITICAL, "fuseEulerYaw: use compass true");
             // Use measured mag components rotated into earth frame to measure yaw
             Tbn_zeroYaw.from_euler(euler321.x, euler321.y, 0.0f);
             Vector3f magMeasNED = Tbn_zeroYaw*magDataDelayed.mag;
             measured_yaw = wrap_PI(-atan2f(magMeasNED.y, magMeasNED.x) + MagDeclination());
         } else if (extNavUsedForYaw) {
+            //gcs().send_text(MAV_SEVERITY_CRITICAL, "fuseEulerYaw: use exta nav");
             // Get the yaw angle  from the external vision data
             extNavDataDelayed.quat.to_euler(euler321.x, euler321.y, euler321.z);
             measured_yaw =  euler321.z;
         } else {
+            //gcs().send_text(MAV_SEVERITY_CRITICAL, "fuseEulerYaw: else");
             // no data so use predicted to prevent unconstrained variance growth
             measured_yaw = predicted_yaw;
         }

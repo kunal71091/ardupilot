@@ -6,7 +6,6 @@
 #include <AP_Vehicle/AP_Vehicle.h>
 #include <GCS_MAVLink/GCS.h>
 #include <AP_GPS/AP_GPS.h>
-
 #include <stdio.h>
 
 extern const AP_HAL::HAL& hal;
