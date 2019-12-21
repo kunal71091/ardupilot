@@ -9,6 +9,10 @@ Waf should always be called from the ardupilot's root directory. Differently
 from the make-based build, with Waf there's a configure step to choose the
 board to be used (default is `sitl`).
 
+update submodules first
+
+git submodule update --init --recursive
+
 ## Basic usage ##
 
 There are several commands in the build system for advanced usages, but here we
