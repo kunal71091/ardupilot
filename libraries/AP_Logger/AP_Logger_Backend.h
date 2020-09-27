@@ -60,6 +60,8 @@ public:
      * packet from a client.
      */
     virtual void stop_logging(void) = 0;
+    // asynchronously stop logging, status can be determined through logging_started()
+    virtual void stop_logging_async(void) { stop_logging(); }
 
     void Fill_Format(const struct LogStructure *structure, struct log_Format &pkt);
     void Fill_Format_Units(const struct LogStructure *s, struct log_Format_Units &pkt);
@@ -70,7 +72,7 @@ public:
 #endif
 
      // for Logger_MAVlink
-    virtual void remote_log_block_status_msg(const mavlink_channel_t chan,
+    virtual void remote_log_block_status_msg(const GCS_MAVLINK &link,
                                              const mavlink_message_t &msg) { }
     // end for Logger_MAVlink
 
